@@ -1,13 +1,23 @@
 import contextlib
 import functools
 import math
+from typing import Tuple
 import skia
+from dataclasses import dataclass
 from .document import RecordingDocument
 from .errors import DrawbotError
 from .gstate import GraphicsState, GraphicsStateMixin
-
+from .path import FLIP_MATRIX
 
 DEFAULT_CANVAS_DIMENSIONS = (1000, 1000)
+
+@dataclass
+class GlyphInfo:
+    gid:int = 0
+    name:str = None
+    pos:Tuple = (0, 0)
+    adv:float = 0
+    path:skia.Path = None
 
 
 class Drawing:
@@ -119,6 +129,46 @@ class Drawing:
             if self._flipCanvas:
                 self._canvas.scale(1, -1)
             self._drawItem(self._canvas.drawTextBlob, blob, 0, 0)
+    
+    def glyphs(self, txt, paths=True):
+        if not txt:
+            # Hard Skia crash otherwise
+            return
+
+        ttFont = self._gstate.textStyle.ttFont
+        glyphOrder = ttFont.getGlyphOrder()
+
+        glyphsInfo = self._gstate.textStyle.shape(txt)
+
+        if paths:
+            gids = sorted(set(glyphsInfo.gids))
+            _paths = [self._gstate.textStyle.skFont.getPath(gid)
+                for gid in gids]        
+            for path in _paths:
+                if path:
+                    path.transform(FLIP_MATRIX)
+
+            _paths = dict(zip(gids, _paths))
+        
+        positions = glyphsInfo.positions
+        infos = []
+
+        for idx, gid in enumerate(glyphsInfo.gids):
+            info = GlyphInfo(
+                gid=gid,
+                name=glyphOrder[gid],
+                pos=glyphsInfo.positions[idx])
+            
+            if idx < len(glyphsInfo.gids) - 1:
+                info.adv = positions[idx+1][0] - positions[idx][0]
+            else:
+                info.adv = glyphsInfo.endPos[0] - positions[idx][0]
+
+            if paths:
+                info.path = _paths[gid]
+            infos.append(info)
+        
+        return infos
 
     def image(self, imagePath, position, alpha=1.0):
         im = self._getImage(imagePath)
