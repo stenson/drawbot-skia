@@ -72,13 +72,17 @@ def _shape(face, font,
     gids = [info.codepoint for info in buf.glyph_infos]
     clusters = [info.cluster + startCluster for info in buf.glyph_infos]
     positions = []
+    advances = []
     startPosX, startPosY = startPos
     x = y = 0
     for pos in buf.glyph_positions:
         dx, dy, ax, ay = pos.position
         positions.append((
             startPosX + (x + dx) * fontScaleX,
-            startPosY + (y + dy) * fontScaleY,
+            startPosY + (y + dy) * fontScaleY))
+        advances.append((
+            ax * fontScaleX,
+            ay * fontScaleY
         ))
         x += ax
         y += ay
@@ -87,6 +91,7 @@ def _shape(face, font,
         gids=gids,
         clusters=clusters,
         positions=positions,
+        advances=advances,
         endPos=endPos,
     )
 

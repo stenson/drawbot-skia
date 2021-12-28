@@ -151,18 +151,15 @@ class Drawing:
             _paths = dict(zip(gids, _paths))
         
         positions = glyphsInfo.positions
+        advances = glyphsInfo.advances
         infos = []
 
         for idx, gid in enumerate(glyphsInfo.gids):
             info = GlyphInfo(
                 gid=gid,
                 name=glyphOrder[gid],
-                pos=glyphsInfo.positions[idx])
-            
-            if idx < len(glyphsInfo.gids) - 1:
-                info.adv = positions[idx+1][0] - positions[idx][0]
-            else:
-                info.adv = glyphsInfo.endPos[0] - positions[idx][0]
+                pos=positions[idx],
+                adv=advances[idx])
 
             if paths:
                 info.path = _paths[gid]
